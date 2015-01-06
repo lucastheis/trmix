@@ -1,0 +1,117 @@
+\documentclass[a4paper]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{pslatex}
+\usepackage{bm}
+\usepackage[left=2cm,right=2cm]{geometry}
+
+\begin{document}
+	\section*{Trust-region method for mixture models}
+		We are given the mixture model
+		\begin{align}
+			p(\mathbf{x}, \mathbf{k}, \bm{\pi}, \bm{\beta})
+			&= p(\bm{\pi}) \left( \prod_k p(\bm{\beta}_k) \right) \prod_n p(\mathbf{x}_n \mid k_n, \bm{\beta}_{k_n}) p(k_n \mid \bm{\pi}),
+		\end{align}
+		with mixture weights $\bm{\pi}$, component parameters $\bm{\beta}$, component indices $\mathbf{k}$, data points $\mathbf{x}$, and
+		\begin{align}
+			p(\bm{\pi}) &= \text{Dir}(\bm{\pi}; \bm{\alpha}), \\
+			p(k_n \mid \bm{\pi}) &= \pi_{k_n}.
+		\end{align}
+		For the mixture components and priors on $\bm{\beta}_k$ we only assume that they are such that the full posterior is from an exponential family,
+		\begin{align}
+			p(\bm{\beta}_{k} \mid \mathbf{x}, \bm{k}) &= h(\bm{\beta}_k) \exp\left(\eta_k(\mathbf{x}, \bm{k})^\top t(\bm{\beta}_k) - A(\eta_k(\mathbf{x}, \bm{k}))\right).
+		\end{align}
+		We approximate the posterior with a mean-field approximation with factors
+		\begin{align}
+			q(\bm{\pi}) &= \text{Dir}(\bm{\pi}; \bm{\gamma}), \\
+			q(k_n) &= \phi_{nk_n}, \\
+			q(\bm{\beta}_k) &= h(\bm{\beta}_k) \exp\left(\bm{\lambda}_k^\top t(\bm{\beta}_k) - A(\bm{\lambda}_k))\right).
+		\end{align}
+		We further define the following lower bounds and stochastic approximations to the lower bounds,
+		\begin{align}
+			\mathcal{L}(\bm{\lambda}, \bm{\gamma}, \bm{\phi})
+			&= \sum_n E_q\left[ \log \frac{p(\mathbf{x}_n \mid k_n, \bm{\beta}) p(k_n \mid \bm{\pi})}{q(k_n)} \right]
+			+ E\left[\log \frac{p(\bm{\pi})}{q(\bm{\pi})}\right] + \sum_k E_q\left[\log \frac{p(\bm{\beta}_k)}{q(\bm{\beta}_k)}\right], \\
+			\mathcal{L}(\bm{\lambda}, \bm{\gamma})
+			&= \mathcal{L}(\bm{\lambda}, \bm{\gamma}, \bm{\phi}^*), \\
+			\mathcal{L}_n(\bm{\lambda}, \bm{\gamma}, \bm{\phi}_n)
+			&= N E_q\left[ \log \frac{p(\mathbf{x}_n \mid k_n, \bm{\beta}) p(k_n \mid \bm{\pi})}{q(k_n)} \right]
+			+ E\left[\log \frac{p(\bm{\pi})}{q(\bm{\pi})}\right] + \sum_k E_q\left[\log \frac{p(\bm{\beta}_k)}{q(\bm{\beta}_k)}\right], \\
+			\mathcal{L}_n(\bm{\lambda}, \bm{\gamma})
+			&= \mathcal{L}_n(\bm{\lambda}, \bm{\gamma}, \bm{\phi}_n^*),
+		\end{align}
+		where
+		\begin{align}
+			\bm{\phi}_n^*
+			&= \underset{\bm{\phi}_n}{\text{argmax}} \, \mathcal{L}_n(\bm{\lambda}, \bm{\gamma}, \bm{\phi}_n) \\
+			&\propto \exp E_q\left[ \log p(\mathbf{x}_n \mid k_n, \bm{\beta}) p(k_n \mid \bm{\pi}) \right] \\
+			&= \exp \left( \psi(\bm{\gamma}) - \psi\left(\sum_k \gamma_k\right) \right) \exp E_q\left[ \log p(\mathbf{x}_n \mid k_n, \bm{\beta}) \right]
+		\end{align}
+		In each step of the trust-region method, we pick one $n$ at random and maximize the following objective,
+		\begin{align}
+			\label{eq:tr_obj}
+			\mathcal{L}_n(\bm{\lambda}, \bm{\gamma}) - \varepsilon_t D_\text{KL}(\bm{\gamma} \mid\mid \bm{\gamma}^t) - \varepsilon_t \sum_k D_\text{KL}(\bm{\lambda}_k \mid\mid \bm{\lambda}_k^t).
+		\end{align}
+		The gradient of the lower bound with respect to $\bm{\gamma}$ is given by
+		\begin{align}
+			\frac{\partial}{\partial \bm{\gamma}} \mathcal{L}_n(\bm{\lambda}, \bm{\gamma})
+			&= N \frac{\partial}{\partial \bm{\gamma}} E_q\left[ \log \pi_{k_n} \right]
+			+ \frac{\partial}{\partial \bm{\gamma}} E_q\left[ \log \frac{p(\bm{\pi})}{q(\bm{\pi})} \right] \\
+			&= N \frac{\partial}{\partial \bm{\gamma}} \sum_k \phi_{nk}^* E_q\left[ \log \pi_k \right]
+			+ \frac{\partial}{\partial \bm{\gamma}} D_\text{KL}( \bm{\gamma} \mid\mid \bm{\alpha} ) \\
+			&= N \frac{\partial}{\partial \bm{\gamma}} \sum_k \phi_{nk}^* \frac{\partial}{\partial \gamma_k} A(\bm{\gamma})
+			+ I(\bm{\gamma}) (\bm{\alpha} - \bm{\gamma})  \\
+			&= N \frac{\partial^2}{\partial \bm{\gamma}^2} A(\bm{\gamma}) \bm{\phi}_{n}^*
+			+ I(\bm{\gamma}) (\bm{\alpha} - \bm{\gamma})  \\
+			&= I(\bm{\gamma}) (\bm{\alpha} + N \bm{\phi}_{n}^* - \bm{\gamma}).
+		\end{align}
+		Setting the gradient of Equation~\ref{eq:tr_obj} to zero yields
+		\begin{align}
+			\bm{\alpha} + N \bm{\phi}_{n}^* - \bm{\gamma} + \varepsilon_t (\bm{\gamma}_t - \bm{\gamma}) &= 0 \\
+			\bm{\gamma} &= (1 - \rho_t) \bm{\gamma}_t + \rho_t (\bm{\alpha} + N\bm{\phi}_n^*),
+		\end{align}
+		where $\rho_t = (1 + \varepsilon_t)^{-1}$. Similarly, the gradient of the lower bound with respect to $\bm{\lambda}$ is given by
+		\begin{align}
+			\frac{\partial}{\partial \bm{\lambda}_k} \mathcal{L}_n(\bm{\lambda}, \bm{\gamma})
+			&= \frac{\partial}{\partial \bm{\lambda}_k} E_q\left[ \log \frac{p(\bm{\beta} \mid (\mathbf{x}_n, k_n)^N)}{q(\bm{\beta})} \right] \\
+			&= \frac{\partial}{\partial \bm{\lambda}_k} E_q\left[ \log \frac{p(\bm{\beta}_k \mid (\mathbf{x}_n, k_n)^N)}{q(\bm{\beta}_k)} \right] \\
+			&= I(\bm{\lambda}) (E_q\left[ \eta_k(\mathbf{x}_n, k_n, N) \right] - \bm{\lambda}_k),
+		\end{align}
+		where $(\mathbf{x}_n, k_n)^N$ indicates that we compute the posterior with respect to $N$ identical copies of $\mathbf{x}_n, k_n$
+		and $\eta_k(\mathbf{x}_n, k_n, N)$ are the corresponding sufficient statistics. Setting the gradient of the full objective to zero yields
+		\begin{align}
+			E_q\left[ \eta_k(\mathbf{x}_n, k_n, N) \right] - \bm{\lambda}_k + \varepsilon_t (\bm{\lambda}_k^t - \bm{\lambda}_k) &= 0 \\
+			\bm{\lambda}_k &= (1 - \rho_t) \bm{\lambda}_t + \rho_t \eta_k(\mathbf{x}_n, k_n, N).
+		\end{align}
+		We optimize Equation~\ref{eq:tr_obj} by alternating between computing $\bm{\phi}_n^*$ and updating $\bm{\lambda}$ and $\bm{\gamma}$.
+
+		\subsection*{Mixture of multivariate Bernoullis}
+			\begin{align}
+				p(\bm{\beta}_k \mid (\mathbf{x}, k)^N )
+				&\propto p(\bm{\beta}_k) p(\mathbf{x}, k \mid \bm{\beta}_k)^N \\
+				&= \prod_i \beta_{ki}^{a - 1}(1 - \beta_{ki})^{b - 1} \beta_{ki}^{Nx_i} (1 - \beta_{ki})^{N(1 - x_i)} \\
+				&= \exp\left( \sum_i (a + N x_i - 1) \log \beta_{ki} + (b + N(1 - x_i) - 1) \log(1 - \beta_{ki}) \right)
+			\end{align}
+			\begin{align}
+				\bm{\lambda}_k &= (\mathbf{a}_k, \mathbf{b}_k) \\
+				\mathbf{a}_k &= (1 - \rho_t) \mathbf{a}_k^t + \rho_t (a + N \phi_{nk}^* x_{ni}) \\
+				\mathbf{b}_k &= (1 - \rho_t) \mathbf{b}_k^t + \rho_t (b + N \phi_{nk}^* (1 - x_{ni}))
+			\end{align}
+			\begin{align}
+				\mathbf{a}_k &= (1 - \rho_t) \mathbf{a}_k^t + \rho_t \left(a + \frac{N}{B} \sum_n \phi_{nk}^* x_{ni}\right) \\
+				\mathbf{b}_k &= (1 - \rho_t) \mathbf{b}_k^t + \rho_t \left(b + \frac{N}{B} \sum_n \phi_{nk}^* (1 - x_{ni})\right)
+			\end{align}
+
+			\begin{align}
+				E_q\left[ \log p(\mathbf{x} \mid k, \bm{\beta}) \right]
+				&= E_q\left[ \sum_i x_i \log \beta_{ki} + \sum_i (1 - x_i) \log (1 - \beta_{ki}) \right] \\
+				&= \sum_i x_i E_q\left[ \log \beta_{ki} \right] + \sum_i (1 - x_i) E\left[ \log (1 - \beta_{ki})  \right] \\
+				&= \sum_i x_i \left( \psi(a_{ki}) - \psi(a_{ki} + b_{ki}) \right) + \sum_i (1 - x_i) \left( \psi(b_{ki}) - \psi(a_{ki} + b_{ki}) \right) \\
+				&= \sum_i x_i \psi(a_{ki}) + \sum_i (1 - x_i) \psi(b_{ki}) - \sum_i \psi(a_{ki} + b_{ki})
+			\end{align}
+
+		\subsection*{Mixture of Gaussians}
+			
+\end{document}
