@@ -2,6 +2,7 @@ from numpy import asarray, vstack, sum, mean, empty, exp, ones, zeros
 from scipy.special import psi
 from utils import logsumexp
 from copy import copy, deepcopy
+from time import sleep
 
 class Mixture(object):
 	def __init__(self, dim=1, alpha=1.):
@@ -85,7 +86,7 @@ class Mixture(object):
 
 
 
-	def train(self, data, batch_size, max_epochs=10, callback=None, **kwargs):
+	def train(self, data, batch_size=50, max_epochs=10, callback=None, **kwargs):
 		kwargs['N'] = data.shape[1]
 
 		if callback:

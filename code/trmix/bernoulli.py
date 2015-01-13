@@ -25,10 +25,9 @@ class Bernoulli(object):
 
 
 	def expected_log_likelihood(self, data):
-		foo = dot(psi(self.alpha).T, data) \
+		return dot(psi(self.alpha).T, data) \
 			+ dot(psi(self.beta).T, 1 - data) \
 			- sum(psi(self.alpha + self.beta))
-		return foo
 
 
 	def p(self):
