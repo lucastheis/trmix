@@ -1,8 +1,10 @@
 from numpy import asarray, vstack, sum, mean, empty, exp, ones, zeros
+from numpy.random import rand, permutation
 from scipy.special import psi
 from utils import logsumexp
 from copy import copy, deepcopy
 from time import sleep
+from six import string_types
 
 class Mixture(object):
 	def __init__(self, dim=1, alpha=1.):
@@ -56,15 +58,24 @@ class Mixture(object):
 
 
 
-	def update_parameters(self,
-			data, kappa=.5, tau=10., max_iter_tr=10, rho=None, N=10000):
+	def update_parameters(self, data, kappa=.5, tau=10., max_iter_tr=10, rho=None, N=None,
+			init='none', update_gamma=True):
 		"""
 		Perform one trust-region update.
+
+		@type  init: tuple/str 
+		@param init: initialization strategy (one of 'drop', 'uniform', 'none')
 		"""
 
-		self.num_updates += 1
+		if N is None:
+			# assume we're given all the data
+			N = data.shape[1]
+
+		if isinstance(init, string_types):
+			init = (init, {})
 
 		# learning rate
+		self.num_updates += 1
 		if rho is None:
 			rho = pow(tau + self.num_updates, -kappa)
 
@@ -74,11 +85,26 @@ class Mixture(object):
 
 		for i in range(max_iter_tr):
 			# E-step
-			phi = self.posterior(data) if i > 0 \
-				else ones([len(self), data.shape[1]]) / len(self)
+			phi = self.posterior(data)
+			
+			# apply heuristic for initialization
+			if max_iter_tr > 1 and i == 0:
+				if init[0].lower() == 'drop':
+					phi *= rand(*phi.shape) < init[1].get('p', .5)
+				elif init[0].lower() == 'normalize':
+					phi += 1e-10
+					phi /= sum(phi, 1)[:, None] * init[1].get('K', N / float(len(self)))
+				elif init[0].lower() == 'uniform':
+					phi = ones(phi.shape) / len(self)
+				elif init[0].lower() == 'shuffle':
+					phi = phi[permutation(len(self))]
+				elif init[0].lower() != 'none':
+					raise ValueError('Unknown initialization strategy \'{0}\'.'.format(
+						init[0]))
 
 			# M-step
-			self.gamma = (1 - rho) * gamma + rho * (self.alpha + N * mean(phi, 1)[:, None])
+			if update_gamma:
+				self.gamma = (1 - rho) * gamma + rho * (self.alpha + N * mean(phi, 1)[:, None])
 
 			for k in range(len(self)):
 				self.components[k].update_parameters(

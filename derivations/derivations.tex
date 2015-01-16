@@ -178,15 +178,16 @@
 			\end{align}
 			an update of the inner loop of the trust-region method is given by
 			\begin{align}
-				s_k &= (1 - \rho_t) s_k^t + \rho_t \left( s + \sum_n \phi_{nk}^* \right), \\
-				\mathbf{b}_k &= (1 - \rho_t) \mathbf{b}_k^t + \rho_t \left( \mathbf{b} - 2 \sum_n \phi_{nk}^* \mathbf{x}_n \right), \\
-				\mathbf{C}_k &= (1 - \rho_t) \mathbf{C}_k^t + \rho_t \left(\mathbf{C} + \sum_n \phi_{nk}^* \mathbf{x}_n\mathbf{x}_n^\top \right), \\
-				\nu_k &= (1 - \rho_t) \nu_k^t + \rho_t \left(\nu + \sum_n \phi_{nk}^* \right).
+				s_k &= (1 - \rho_t) s_k^t + \rho_t \left( s + \frac{N}{B} \sum_n \phi_{nk}^* \right), \\
+				\mathbf{b}_k &= (1 - \rho_t) \mathbf{b}_k^t + \rho_t \left( \mathbf{b} - 2 \frac{N}{B} \sum_n \phi_{nk}^* \mathbf{x}_n \right), \\
+				\mathbf{C}_k &= (1 - \rho_t) \mathbf{C}_k^t + \rho_t \left(\mathbf{C} + \frac{N}{B} \sum_n \phi_{nk}^* \mathbf{x}_n\mathbf{x}_n^\top \right), \\
+				\nu_k &= (1 - \rho_t) \nu_k^t + \rho_t \left(\nu + \frac{N}{B} \sum_n \phi_{nk}^* \right).
 			\end{align}
 			In terms of the non-canonical parametrization,
 			\begin{align}
-				\mathbf{m}_k &= (1 - \rho_t) \frac{s_k^t}{s_k} \mathbf{m}_k^t + \frac{1}{s_k} \rho_t \left( s\mathbf{m} + \sum_n \phi_{nk}^* \mathbf{x}_n \right), \\
-				\bm{\Psi}_k &= (1 - \rho_t) \left(\bm{\Psi}_k^t + s_k^t\mathbf{m}_k^t{\mathbf{m}_k^t}^\top\right) + \rho_t \left(\bm{\Psi} + s\mathbf{m}\mathbf{m}^\top + \sum_n \phi_{nk}^* \mathbf{x}_n\mathbf{x}_n^\top \right) - s_k\mathbf{m}_k\mathbf{m}_k^\top.
+				\mathbf{m}_k &= (1 - \rho_t) \frac{s_k^t}{s_k} \mathbf{m}_k^t + \frac{1}{s_k} \rho_t \left( s\mathbf{m} + \frac{N}{B} \sum_n \phi_{nk}^* \mathbf{x}_n \right), \\
+				\bm{\Psi}_k &= (1 - \rho_t) \left(\bm{\Psi}_k^t +
+			s_k^t\mathbf{m}_k^t{\mathbf{m}_k^t}^\top\right) + \rho_t \left(\bm{\Psi} + s\mathbf{m}\mathbf{m}^\top + \frac{N}{B} \sum_n \phi_{nk}^* \mathbf{x}_n\mathbf{x}_n^\top \right) - s_k\mathbf{m}_k\mathbf{m}_k^\top.
 			\end{align}
 
 			To compute he expected log-likelihood (Equation~\ref{eq:expected_loglikelihood}), we need

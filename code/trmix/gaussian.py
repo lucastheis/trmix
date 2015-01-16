@@ -1,5 +1,5 @@
 from copy import copy
-from numpy import sum, zeros, eye, sqrt, arange, pi, log, dot
+from numpy import sum, ones, zeros, eye, sqrt, arange, pi, log, dot
 from numpy.linalg import cholesky, inv, slogdet
 from numpy.random import randn
 from scipy.special import psi
@@ -26,27 +26,36 @@ class Gaussian(object):
 
 
 
-	def update_parameters(self, data, phi, base, N, rho):
+	def update_parameters(self, data, phi=None, base=None, N=None, rho=1.):
+		if N is None:
+			# assume we're given all the data
+			N = data.shape[1]
+
+		if base is None:
+			base = self
+
+		if phi is None:
+			phi = ones([1, data.shape[1]])
+
 		# expected total number of documents assigned to this cluster
 		N_k = sum(phi) * N / data.shape[1]
-
-		# expected empirical mean
-		x_bar = dot(data, phi.T / sum(phi))
-
-		# expected empirical covariance structure
-		x = (data - x_bar) * sqrt(phi)
-		C = dot(x, x.T) * N / data.shape[1]
 
 		self.s = (1. - rho) * base.s + rho * (self.s0 + N_k)
 		self.nu = (1. - rho) * base.nu + rho * (self.nu0 + N_k)
 
+		x_bar = dot(data, phi.T / sum(phi))
+
 		self.m = (1. - rho) * base.s * base.m + rho * (self.s0 * self.m0 + N_k * x_bar)
 		self.m /= self.s
 
-		xbm = x_bar - self.m
+		smm0 = self.s0 * dot(self.m0, self.m0.T)
+		smmk = self.s * dot(self.m, self.m.T)
+		smmt = base.s * dot(base.m, base.m.T)
+		
+		x = sqrt(phi) * data
+		C = dot(x, x.T) * N / data.shape[1]
 
-		self.psi = (1. - rho) * base.psi \
-			+ rho * (self.psi0 + C + self.s0 * N_k / (self.s0 + N_k) * dot(xbm, xbm.T))
+		self.psi = (1. - rho) * (base.psi + smmt) + rho * (self.psi0 + smm0 + C) - smmk
 
 
 
