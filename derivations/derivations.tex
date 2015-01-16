@@ -7,30 +7,40 @@
 \usepackage{bm}
 \usepackage[left=2cm,right=2cm]{geometry}
 \usepackage{natbib}
+\usepackage{setspace}
+
+\setlength\parindent{0cm}
+\setstretch{1.25}
 
 \begin{document}
 	\section*{Trust-region method for mixture models}
-		We are given the mixture model
+		Consider the following mixture model
 		\begin{align}
 			p(\mathbf{x}, \mathbf{k}, \bm{\pi}, \bm{\beta})
-			&= p(\bm{\pi}) \left( \prod_k p(\bm{\beta}_k) \right) \prod_n p(\mathbf{x}_n \mid k_n, \bm{\beta}_{k_n}) p(k_n \mid \bm{\pi}),
+			&= p(\bm{\pi}) \left( \prod_k p(\bm{\beta}_k) \right) \prod_n p(\mathbf{x}_n \mid k_n, \bm{\beta}) p(k_n \mid \bm{\pi}),
 		\end{align}
-		with mixture weights $\bm{\pi}$, component parameters $\bm{\beta}$, component indices $\mathbf{k}$, data points $\mathbf{x}$, and
+		with mixture weights $\bm{\pi}$, component parameters $\bm{\beta}$, latent component indices $\mathbf{k}$, and observed data points
+		$\mathbf{x}$, where
 		\begin{align}
 			p(\bm{\pi}) &= \text{Dir}(\bm{\pi}; \bm{\alpha}), \\
-			p(k_n \mid \bm{\pi}) &= \pi_{k_n}.
+			p(k_n \mid \bm{\pi}) &= \pi_{k_n}, \\
+			p(\bm{\beta}_k) &\propto h(\bm{\beta}_k) \exp\left( \bm{\eta}^\top t(\bm{\beta}_k) \right), \\
+			p(\mathbf{x}_n \mid k_n, \bm{\beta}) &\propto g(\mathbf{x}_n) \exp\left( t(\bm{\beta}_{k_n})^\top f(\mathbf{x}_n) \right)
 		\end{align}
-		For the mixture components and priors on $\bm{\beta}_k$ we only assume that they are such that the full posterior is from an exponential family,
+		for suitable funtions $f$, $g$, $h$, and $t$.
+		Then for a fixed cluster assignment $\mathbf{k}$ the posterior over $\bm{\beta}$ is given by
 		\begin{align}
-			p(\bm{\beta}_{k} \mid \mathbf{x}, \bm{k}) &= h(\bm{\beta}_k) \exp\left(\eta_k(\mathbf{x}, \bm{k})^\top t(\bm{\beta}_k) - A(\eta_k(\mathbf{x}, \bm{k}))\right).
+			p(\bm{\beta} \mid \mathbf{x}, \bm{k}) 
+			&\propto \prod_k p(\bm{\beta}_k) \prod_n p(\mathbf{x}_n \mid k_n, \bm{\beta}) \\
+			&\propto \prod_k h(\bm{\beta}_k) \exp\left( \left(\bm{\eta} + \sum_n \delta_{kk_n} f(\mathbf{x}_n)\right)^\top t(\bm{\beta}_k) \right).
 		\end{align}
-		We approximate the posterior with a mean-field approximation with factors
+		The factors of a mean-field approximation to the posterior are given by
 		\begin{align}
 			q(\bm{\pi}) &= \text{Dir}(\bm{\pi}; \bm{\gamma}), \\
 			q(k_n) &= \phi_{nk_n}, \\
-			q(\bm{\beta}_k) &= h(\bm{\beta}_k) \exp\left(\bm{\lambda}_k^\top t(\bm{\beta}_k) - A(\bm{\lambda}_k))\right).
+			q(\bm{\beta}_k) &\propto h(\bm{\beta}_k) \exp\left(\bm{\lambda}_k^\top t(\bm{\beta}_k)\right).
 		\end{align}
-		We further define the following lower bounds and stochastic approximations to the lower bounds,
+		We define the following lower bounds and stochastic approximations to the lower bounds,
 		\begin{align}
 			\mathcal{L}(\bm{\lambda}, \bm{\gamma}, \bm{\phi})
 			&= \sum_n E_q\left[ \log \frac{p(\mathbf{x}_n \mid k_n, \bm{\beta}) p(k_n \mid \bm{\pi})}{q(k_n)} \right]
@@ -50,6 +60,12 @@
 			&\propto \exp E_q\left[ \log p(\mathbf{x}_n \mid k_n, \bm{\beta}) p(k_n \mid \bm{\pi}) \right] \\
 			&= \exp \left( \psi(\bm{\gamma}) - \psi\left(\sum_k \gamma_k\right) \right) \exp E_q\left[ \log p(\mathbf{x}_n \mid k_n, \bm{\beta}) \right]
 		\end{align}
+		For the expected log-likelihood, we have
+		\begin{align}
+			\label{eq:expected_loglikelihood}
+			E_q\left[ \log p(\mathbf{x}_n \mid k_n, \bm{\beta}) \right]
+			= E_q\left[ t(\bm{\beta}_{k_n})\right]^\top f(\mathbf{x}_n) - E\left[ A(\bm{\beta}_{k_n}) \right] + \log g(\mathbf{x}_n).
+		\end{align}
 		In each step of the trust-region method, we pick one $n$ at random and maximize the following objective,
 		\begin{align}
 			\label{eq:tr_obj}
@@ -66,9 +82,10 @@
 			+ I(\bm{\gamma}) (\bm{\alpha} - \bm{\gamma})  \\
 			&= N \frac{\partial^2}{\partial \bm{\gamma}^2} A(\bm{\gamma}) \bm{\phi}_{n}^*
 			+ I(\bm{\gamma}) (\bm{\alpha} - \bm{\gamma})  \\
-			&= I(\bm{\gamma}) (\bm{\alpha} + N \bm{\phi}_{n}^* - \bm{\gamma}).
+			&= I(\bm{\gamma}) (\bm{\alpha} + N \bm{\phi}_{n}^* - \bm{\gamma}),
 		\end{align}
-		Setting the gradient of Equation~\ref{eq:tr_obj} to zero yields
+		where $A(\bm{\gamma})$ is the log-partition function of the Dirichlet distribution and $I(\bm{\gamma})$ is the Fisher information matrix.
+		Computing the full gradient of Equation~\ref{eq:tr_obj} and setting it to zero yields
 		\begin{align}
 			\bm{\alpha} + N \bm{\phi}_{n}^* - \bm{\gamma} + \varepsilon_t (\bm{\gamma}_t - \bm{\gamma}) &= 0 \\
 			\bm{\gamma} &= (1 - \rho_t) \bm{\gamma}_t + \rho_t (\bm{\alpha} + N\bm{\phi}_n^*),
@@ -77,16 +94,21 @@
 		\begin{align}
 			\frac{\partial}{\partial \bm{\lambda}_k} \mathcal{L}_n(\bm{\lambda}, \bm{\gamma})
 			&= \frac{\partial}{\partial \bm{\lambda}_k} E_q\left[ \log \frac{p(\bm{\beta} \mid (\mathbf{x}_n, k_n)^N)}{q(\bm{\beta})} \right] \\
-			&= \frac{\partial}{\partial \bm{\lambda}_k} E_q\left[ \log \frac{p(\bm{\beta}_k \mid (\mathbf{x}_n, k_n)^N)}{q(\bm{\beta}_k)} \right] \\
-			&= I(\bm{\lambda}) (E_q\left[ \eta_k(\mathbf{x}_n, k_n, N) \right] - \bm{\lambda}_k),
+			&= I(\bm{\lambda}) (\bm{\eta} + N\phi^*_{nk} f(\mathbf{x}_n) - \bm{\lambda}_k),
 		\end{align}
-		where $(\mathbf{x}_n, k_n)^N$ indicates that we compute the posterior with respect to $N$ identical copies of $\mathbf{x}_n, k_n$
-		and $\eta_k(\mathbf{x}_n, k_n, N)$ are the corresponding sufficient statistics. Setting the gradient of the full objective to zero yields
+		where $(\mathbf{x}_n, k_n)^N$ indicates that we compute the posterior with respect to $N$ as if we had $N$ identical copies of $\mathbf{x}_n, k_n$.
+		Setting the gradient of the full objective to zero yields
 		\begin{align}
 			E_q\left[ \eta_k(\mathbf{x}_n, k_n, N) \right] - \bm{\lambda}_k + \varepsilon_t (\bm{\lambda}_k^t - \bm{\lambda}_k) &= 0 \\
-			\bm{\lambda}_k &= (1 - \rho_t) \bm{\lambda}_k^t + \rho_t E_q\left[ \eta_k(\mathbf{x}_n, k_n, N) \right].
+			\bm{\lambda}_k &= (1 - \rho_t) \bm{\lambda}_k^t + \rho_t \left( \bm{\eta} + N \phi^*_{nk} f(\mathbf{x}_n) \right).
 		\end{align}
 		We optimize Equation~\ref{eq:tr_obj} by alternating between computing $\bm{\phi}_n^*$ and updating $\bm{\lambda}$ and $\bm{\gamma}$.
+		For mini-batches of data points, this update becomes
+		\begin{align}
+			\label{eq:tr_update}
+			\bm{\lambda}_k &= (1 - \rho_t) \bm{\lambda}_k^t + \rho_t \left( \bm{\eta} + \frac{N}{B} \sum_n \phi^*_{nk} f(\mathbf{x}_n) \right),
+		\end{align}
+		where the sum is over all data points in the batch and $B$ is the batch size.
 
 		\subsection*{Mixture of multivariate Bernoullis}
 			\begin{align}
@@ -114,87 +136,78 @@
 			\end{align}
 
 		\subsection*{Mixture of Gaussians}
-			We are assuming a normal-inverse-Wishart prior over the mean and covariance of each Gaussian,
-			\begin{align}
-				\bm{\beta}_k &= (\bm{\mu}_k, \bm{\Sigma}_k), \\
-				p(\bm{\mu}_k, \bm{\Sigma}_k) &= \mathcal{N}(\bm{\mu}_k; \mathbf{m}, s^{-1}\bm{\Sigma}_k) \mathcal{W}^{-1}(\bm{\Sigma}_k; \bm{\Psi}, \nu).
-			\end{align}
-			Let $\mathcal{D} = \{ \mathbf{x}_n : k_n = k \}$ be a set of points assigned to cluster $k$. Then the posterior is given by
-			\begin{align}
-				p(\bm{\mu}_k, \bm{\Sigma}_k \mid \mathcal{D}) &= \mathcal{N}(\bm{\mu}_k; \mathbf{m}_\mathcal{D}, s_\mathcal{D}^{-1}\bm{\Sigma}) \mathcal{W}^{-1}(\bm{\Sigma}; \bm{\Psi}_\mathcal{D}, \nu_\mathcal{D}),
-			\end{align}
-			where
-			\begin{align}
-				s_\mathcal{D} &= s + |\mathcal{D}|, \\
-				\mathbf{m}_\mathcal{D} &= (s + |\mathcal{D}|)^{-1} \left(s\mathbf{m} + \sum_{ \mathbf{x}_n \in \mathcal{D}} \mathbf{x}_n \right), \\
-				\nu_\mathcal{D} &= \nu + |\mathcal{D}|, \\
-				\bm{\Psi}_\mathcal{D} &= \bm{\Psi} + \sum_i (\mathbf{x}_i - \mathbf{\bar x})(\mathbf{x}_i - \mathbf{\bar x})^\top
-				+ \frac{s|\mathcal{D}|}{s + |\mathcal{D}|} (\mathbf{\bar x} - \mathbf{m}) (\mathbf{\bar x} - \mathbf{m})^\top.
-			\end{align}
-			Bringing the normal-inverse-Wishart distribution into canonical form,
+			The normal-inverse-Wishart prior in canonical form is given by
 			\begin{align}
 				p(\bm{\mu}, \bm{\Sigma})
-				&\propto \exp\left( -\frac{s}{2} (\bm{\mu} - \mathbf{m})^\top \bm{\Sigma}^{-1} (\bm{\mu} - \mathbf{m}) \right)
-				\exp\left( -\frac{1}{2} \text{tr}(\bm{\Psi}\bm{\Sigma}^{-1}) \right) |\bm{\Sigma}|^{-\frac{\nu + D + 1}{2}} \\
+					&\propto \exp\left( -\frac{s}{2} (\bm{\mu} - \mathbf{m})^\top \bm{\Sigma}^{-1} (\bm{\mu} - \mathbf{m}) \right) 
+					\exp\left( -\frac{1}{2} \text{tr}(\bm{\Psi}\bm{\Sigma}^{-1}) \right) |\bm{\Sigma}|^{-\frac{\nu + D + 1}{2}} \\
+					&= \exp\left( -\frac{s}{2} \bm{\mu}^\top \bm{\Sigma}^{-1} \bm{\mu} + s \bm{\mu}^\top \bm{\Sigma}^{-1} \mathbf{m}
+					- \frac{s}{2} \mathbf{m}^\top\bm{\Sigma}^{-1}\mathbf{m} - \frac{1}{2} \text{tr}(\bm{\Psi}\bm{\Sigma}^{-1})
+					- \frac{\nu + D + 1}{2} \log |\bm{\Sigma}| \right) \\
 				&= \exp\left( -\frac{s}{2} \bm{\mu}^\top \bm{\Sigma}^{-1} \bm{\mu} + s \bm{\mu}^\top \bm{\Sigma}^{-1} \mathbf{m}
-				- \frac{s}{2} \mathbf{m}^\top\bm{\Sigma}^{-1}\mathbf{m} - \frac{1}{2} \text{tr}(\bm{\Psi}\bm{\Sigma}^{-1})
-				- \frac{\nu + D + 1}{2} \log |\bm{\Sigma}| \right) \\
-				&= \exp\left( -\frac{s}{2} \bm{\mu}^\top \bm{\Sigma}^{-1} \bm{\mu} + s \bm{\mu}^\top \bm{\Sigma}^{-1} \mathbf{m}
-				- \frac{1}{2} \text{tr}(s\mathbf{m}\mathbf{m}^\top\bm{\Sigma}^{-1}) - \frac{1}{2} \text{tr}(\bm{\Psi}\bm{\Sigma}^{-1})
-				- \frac{\nu}{2} \log |\bm{\Sigma}| - \frac{D + 1}{2} \log |\bm{\Sigma}| \right),
-			\end{align}
-			we see that its sufficient statistics and natural parameters are given by
-			\begin{align}
-				t(\bm{\mu}, \bm{\Sigma})
-				&= \left( \bm{\mu}^\top \bm{\Sigma}^{-1} \bm{\mu}, \bm{\Sigma}^{-1}\bm{\mu}, \text{vec}\, \bm{\Sigma}^{-1}, \log|\bm{\Sigma}| \right), \\
-				\eta(\mathbf{m}, s, \bm{\Psi}, \nu)
-				&= \left( -\frac{s}{2}, s\mathbf{m}, -\frac{1}{2} \text{vec}(s\mathbf{m}\mathbf{m}^\top + \bm{\Psi}), -\frac{\nu}{2} \right).
-			\end{align}
-			Let us call the corresponding natural parameters of the approximate posterior
-			\begin{align}
-				\bm{\lambda}_k = (a_k, \mathbf{b}_k, \text{vec} \, \mathbf{C}_k, d_k).
-			\end{align}
-			To update the natural parameters, we have to perform
-			\begin{align}
-				a_k &= (1 - \rho_t) a_k^t - \rho_t E_q\left[ \frac{s_\mathcal{D}}{2} \right], \\
-				\mathbf{b}_k &= (1 - \rho_t) \mathbf{b}_k^t + \rho_t E_q[s_\mathcal{D} \mathbf{m}_\mathcal{D}], \\
-				\label{eq:update_C}
-				\mathbf{C}_k &= (1 - \rho_t) \mathbf{C}_k^t - \rho_t E_q\left[\frac{1}{2} \left( s_\mathcal{D} \mathbf{m}_\mathcal{D}\mathbf{m}_\mathcal{D}^\top + \bm{\Psi}_\mathcal{D} \right)\right], \\
-				d_k &= (1 - \rho_t) d_k^t - \rho_t E_q\left[\frac{\nu_\mathcal{D}}{2}\right],
-			\end{align}
-			where the expectation is taken over possible instantiations of $\mathcal{D}$, i.e., over the $k_n$.
-			In terms of the previous parametrization, we have
-			\begin{align}
-				-\frac{s_k}{2} &= -(1 - \rho_t) \frac{s_k^t}{2} - \rho_t E_q\left[\frac{s_\mathcal{D}}{2}\right], \\
-				s_k &= (1 - \rho_t) s_k^t + \rho_t E_q\left[s + |\mathcal{D}|\right] \\
-				&= (1 - \rho_t) s_k^t + \rho_t \left( s + \sum_n \phi^*_{nk} \right),
-			\end{align}
-			\begin{align}
-				\nu_k &= (1 - \rho_t) \nu_k^t + \rho_t \left( \nu + \sum_n \phi^*_{nk} \right),
-			\end{align}
-			\begin{align}
-				s_k \mathbf{m}_k &= (1 - \rho_t) s_k^t \mathbf{m}_k^t + \rho_t E_q[s_\mathcal{D} \mathbf{m}_\mathcal{D}], \\
-				\mathbf{m}_k &= (1 - \rho_t) \frac{s_k^t}{s_k} \mathbf{m}_k^t + \rho_t \frac{1}{s_k} \left( s \mathbf{m} + \sum_n \phi_{nk}^* \mathbf{x}_n \right),
-			\end{align}
-			\begin{align}
-				s_k \mathbf{m}_k\mathbf{m}_k^\top + \bm{\Psi}_k
-				&= (1 - \rho_t) \left( s_k^t \mathbf{m}_k^t{\mathbf{m}_k^t}^\top + \bm{\Psi}_k^t \right) + \rho_t E_q\left[ s_\mathcal{D} \mathbf{m}_\mathcal{D}\mathbf{m}_\mathcal{D}^\top + \bm{\Psi}_\mathcal{D} \right], \\
-				\bm{\Psi}_k
-				&= (1 - \rho_t) \left( s_k^t \mathbf{m}_k^t{\mathbf{m}_k^t}^\top + \bm{\Psi}_k^t \right) + \rho_t E_q\left[ s_\mathcal{D} \mathbf{m}_\mathcal{D}\mathbf{m}_\mathcal{D}^\top + \bm{\Psi}_\mathcal{D} \right]
-				- s_k \mathbf{m}_k\mathbf{m}_k^\top \\
-				&\approx (1 - \rho_t) \bm{\Psi}_k^t + \rho_t E_q\left[ \bm{\Psi}_\mathcal{D} \right] \\
-				&\approx (1 - \rho_t) \bm{\Psi}_k^t + \rho_t \left( \bm{\Psi} + \sum_n \phi_{nk}^* (\mathbf{x}_n - \mathbf{\bar x}_k) (\mathbf{x}_n - \mathbf{\bar x}_k)^\top
-					+ \frac{s \sum_n \phi_{nk}^*}{s + \sum_n \phi_{nk}^*} (\mathbf{\bar x}_k - \mathbf{m}) (\mathbf{\bar x}_k - \mathbf{m})^\top \right),
+					- \frac{1}{2} \text{tr}(s\mathbf{m}\mathbf{m}^\top\bm{\Sigma}^{-1}) - \frac{1}{2} \text{tr}(\bm{\Psi}\bm{\Sigma}^{-1})
+					- \frac{\nu}{2} \log |\bm{\Sigma}| - \frac{D + 1}{2} \log |\bm{\Sigma}| \right) \\
+				&= \exp\left( \eta(\mathbf{m}, s, \bm{\Psi}, \nu)^\top t(\bm{\mu}, \bm{\Sigma}) \right)
 			\end{align}
 			where
 			\begin{align}
-				\mathbf{\bar x}_k = \sum_n \phi_{nk}^* \mathbf{x}_n.
+				\bm{\eta} 
+					&= \eta(\mathbf{m}, s, \bm{\Psi}, \nu) \\
+					&= \left( s, -2s\mathbf{m}, \text{vec}(s\mathbf{m}\mathbf{m}^\top + \bm{\Psi}), \nu \right) \\
+					&= \left( s, \mathbf{b}, \text{vec}\, \mathbf{C}, \nu \right), \\
+				t(\bm{\mu}, \bm{\Sigma})
+					&= -\frac{1}{2} \left( \bm{\mu}^\top \bm{\Sigma}^{-1} \bm{\mu}, \bm{\Sigma}^{-1}\bm{\mu}, \text{vec}\, \bm{\Sigma}^{-1}, \log|\bm{\Sigma}| \right).
 			\end{align}
-			The expected log-likelihood is given by
+			The likelihood for a single data point $\mathbf{x}$ is given by
+			\begin{align}
+				p(\mathbf{x} \mid \bm{\mu}, \bm{\Sigma})
+					&\propto \exp\left( -\frac{1}{2} (\mathbf{x} - \bm{\mu})^\top \bm{\Sigma}^{-1} (\mathbf{x} - \bm{\mu}) \right) / |\bm{\Sigma}|^\frac{1}{2} \\
+					&= \exp\left( -\frac{1}{2} \text{tr}\left(\bm{\Sigma}^{-1} \mathbf{x}\mathbf{x}^\top \right) + \mathbf{x}^\top \bm{\Sigma}^{-1}\bm{\mu} - \frac{1}{2} \bm{\mu}^\top \bm{\Sigma}^{-1} \bm{\mu} - \frac{1}{2} \log |\bm{\Sigma}| \right) \\
+					&= \exp\left( t(\bm{\mu}, \bm{\Sigma})^\top f(\mathbf{x}) \right),
+			\end{align}
+			where
+			\begin{align}
+				f(\mathbf{x}) 
+					&= \left(1, -2\mathbf{x}, \text{vec}\left(\mathbf{x}\mathbf{x}^\top\right), 1 \right).
+			\end{align}
+			Hence, assuming the parameters of the approximating distribution are given by
+			\begin{align}
+				\bm{\eta}_k 
+				&= \eta(\mathbf{m}_k, s_k, \bm{\Psi}_k, \nu_k)
+				= \left( s_k, \mathbf{b}_k, \text{vec}\, \mathbf{C}_k, \nu_k \right),
+			\end{align}
+			an update of the inner loop of the trust-region method is given by
+			\begin{align}
+				s_k &= (1 - \rho_t) s_k^t + \rho_t \left( s + \sum_n \phi_{nk}^* \right), \\
+				\mathbf{b}_k &= (1 - \rho_t) \mathbf{b}_k^t + \rho_t \left( \mathbf{b} - 2 \sum_n \phi_{nk}^* \mathbf{x}_n \right), \\
+				\mathbf{C}_k &= (1 - \rho_t) \mathbf{C}_k^t + \rho_t \left(\mathbf{C} + \sum_n \phi_{nk}^* \mathbf{x}_n\mathbf{x}_n^\top \right), \\
+				\nu_k &= (1 - \rho_t) \nu_k^t + \rho_t \left(\nu + \sum_n \phi_{nk}^* \right).
+			\end{align}
+			In terms of the non-canonical parametrization,
+			\begin{align}
+				\mathbf{m}_k &= (1 - \rho_t) \frac{s_k^t}{s_k} \mathbf{m}_k^t + \frac{1}{s_k} \rho_t \left( s\mathbf{m} + \sum_n \phi_{nk}^* \mathbf{x}_n \right), \\
+				\bm{\Psi}_k &= (1 - \rho_t) \left(\bm{\Psi}_k^t + s_k^t\mathbf{m}_k^t{\mathbf{m}_k^t}^\top\right) + \rho_t \left(\bm{\Psi} + s\mathbf{m}\mathbf{m}^\top + \sum_n \phi_{nk}^* \mathbf{x}_n\mathbf{x}_n^\top \right) - s_k\mathbf{m}_k\mathbf{m}_k^\top.
+			\end{align}
+
+			To compute he expected log-likelihood (Equation~\ref{eq:expected_loglikelihood}), we need
+			\begin{align}
+				E_q\left[ \bm{\mu}_k^\top \bm{\Sigma}_k^{-1} \bm{\mu}_k \right]
+				&= E_q\left[ E_q\left[ \bm{\mu}_k^\top \bm{\Sigma}_k^{-1} \bm{\mu}_k \mid \bm{\Sigma}_k \right] \right] \\
+				\label{eq:petersen}
+				&= E_q\left[ \text{tr}\left(s_k^{-1}\bm{\Sigma}_k\bm{\Sigma}_{k}^{-1}\right) + \mathbf{m}_k^\top \bm{\Sigma}_k^{-1} \mathbf{m}_k\right] \\
+				&= Ds_k^{-1} + \nu_k \mathbf{m}_k^\top \bm{\Psi}_k^{-1} \mathbf{m}_k, \\
+				E_q\left[\bm{\Sigma}_k^{-1} \bm{\mu}_k \right]^\top \mathbf{x}
+				&= \nu_k \mathbf{m}_k^\top \bm{\Psi}_k^{-1} \mathbf{x}, \\
+				\mathbf{x}^\top E_q\left[ \bm{\Sigma}_k^{-1} \right] \mathbf{x}
+				&= \nu_k \mathbf{x}^\top \bm{\Psi}_k^{-1} \mathbf{x}, \\
+				\label{eq:bishop}
+				E_q\left[\log |\bm{\Sigma}_k^{-1}|\right]
+				&= \sum_{i = 1}^D \psi\left( \frac{\nu_k + 1 - i}{2} \right) + D\log 2 + \log|\bm{\Psi}_k^{-1}|.
+			\end{align}
+			For Equation~\ref{eq:petersen}, see \cite{Petersen:2008}. For Equation~\ref{eq:bishop}, see \cite{Bishop:2006}.
+			The expected log-likelihood is thus given by
 			\begin{align}
 				E_q\left[ \log p(\mathbf{x} \mid k, \bm{\beta}) \right]
-				&= E_q\left[ \log \mathcal{N}(\mathbf{x}; \bm{\mu}_k, \bm{\Sigma}_k) \right] \\
-				&= E_q\left[ -\frac{1}{2}(\mathbf{x} - \bm{\mu}_k)^\top \bm{\Sigma}_k^{-1} (\mathbf{x} - \bm{\mu}_k) + \frac{1}{2} \log |\bm{\Sigma}_k^{-1}| - \frac{D}{2}\log(2\pi)\right] \\
 				&= E_q\left[ -\frac{1}{2}\mathbf{x}^\top \bm{\Sigma}_k^{-1} \mathbf{x} + \mathbf{x}\bm{\Sigma}_k^{-1} \bm{\mu}_k - \frac{1}{2}\bm{\mu}_k^\top \bm{\Sigma}_k^{-1} \bm{\mu}_k + \frac{1}{2} \log |\bm{\Sigma}_k^{-1}| - \frac{D}{2}\log(2\pi)\right] \\
 				&= - \frac{\nu_k}{2} \mathbf{x}^\top \bm{\Psi}_k^{-1} \mathbf{x} + \nu_k \mathbf{x}^\top \bm{\Psi}_k^{-1} \mathbf{m}_k
 				- \frac{D}{2} s_k^{-1} - \frac{\nu_k}{2} \mathbf{m}_k^\top \bm{\Psi}_k^{-1} \mathbf{m}_k \\
@@ -202,24 +215,8 @@
 				- \frac{D}{2} \log(2\pi) \\
 				&= - \frac{\nu_k}{2} (\mathbf{x} - \mathbf{m}_k)^\top \bm{\Psi}_k^{-1} (\mathbf{x} - \mathbf{m}_k)
 				- \frac{D}{2} s_k^{-1} + \frac{1}{2} \sum_{i = 1}^D \psi\left( \frac{\nu_k + 1 - i}{2} \right) + \frac{1}{2} \log|\bm{\Psi}_k^{-1}|
-				- \frac{D}{2} \log\pi,
+				- \frac{D}{2} \log\pi.
 			\end{align}
-			since
-			\begin{align}
-				E_q\left[ \bm{\mu}_k^\top \bm{\Sigma}_k^{-1} \bm{\mu}_k \right]
-				&= E_q\left[ E_q\left[ \bm{\mu}_k^\top \bm{\Sigma}_k^{-1} \bm{\mu}_k \mid \bm{\Sigma}_k \right] \right] \\
-				\label{eq:petersen}
-				&= E_q\left[ \text{tr}\left(s_k^{-1}\bm{\Sigma}_k\bm{\Sigma}_{k}^{-1}\right) + \mathbf{m}_k^\top \bm{\Sigma}_k^{-1} \mathbf{m}_k\right] \\
-				&= Ds_k^{-1} + \nu_k \mathbf{m}_k^\top \bm{\Psi}_k^{-1} \mathbf{m}_k, \\
-				E_q\left[ \mathbf{x}^\top \bm{\Sigma}_k^{-1} \mathbf{x} \right]
-				&= \nu_k \mathbf{x}^\top \bm{\Psi}_k^{-1} \mathbf{x}, \\
-				E_q\left[\mathbf{x}^\top \bm{\Sigma}_k^{-1} \bm{\mu}_k \right]
-				&= \nu_k \mathbf{x}^\top \bm{\Psi}_k^{-1} \mathbf{m}_k, \\
-				\label{eq:bishop}
-				E_q\left[\log |\bm{\Sigma}_k^{-1}|\right]
-				&= \sum_{i = 1}^D \psi\left( \frac{\nu_k + 1 - i}{2} \right) + D\log 2 + \log|\bm{\Psi}_k^{-1}|.
-			\end{align}
-			For Equation~\ref{eq:petersen}, see \cite{Petersen:2008}. For Equation~\ref{eq:bishop}, see \cite{Bishop:2006}.
 
 	\bibliographystyle{abbrvnat}
 	\bibliography{references}
