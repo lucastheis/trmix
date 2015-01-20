@@ -1,6 +1,6 @@
-from numpy import asarray, vstack, sum, mean, empty, exp, ones, zeros
+from numpy import asarray, vstack, sum, mean, empty, exp, log, ones, zeros, dot
 from numpy.random import rand, permutation
-from scipy.special import psi
+from scipy.special import psi, gammaln
 from utils import logsumexp
 from copy import copy, deepcopy
 from time import sleep
@@ -123,3 +123,29 @@ class Mixture(object):
 				self.update_parameters(data[:, b:b + batch_size], **kwargs)
 				if callback:
 					callback(self)
+
+
+
+	def lower_bound(self, data):
+		"""
+		Compute lower bound with respect to the given data points.
+		"""
+
+		phi = self.posterior(data)
+
+		L = -sum(phi * log(phi))
+
+		for k in range(len(self)):
+			L += sum(phi[[k]] * self[k].expected_log_likelihood(data))
+
+		a = self.alpha + sum(phi, 1)[:, None] - self.gamma
+		b = psi(self.gamma) - psi(self.gamma.sum())
+		L += dot(a.T, b)
+
+		L += gammaln(self.dim * self.alpha) - gammaln(self.gamma.sum())
+		L += gammaln(self.gamma).sum() - self.dim * gammaln(self.alpha)
+
+		for k in range(len(self)):
+			L -= self[k].prior_divergence()
+
+		return L

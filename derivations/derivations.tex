@@ -109,6 +109,23 @@
 			\bm{\lambda}_k &= (1 - \rho_t) \bm{\lambda}_k^t + \rho_t \left( \bm{\eta} + \frac{N}{B} \sum_n \phi^*_{nk} f(\mathbf{x}_n) \right),
 		\end{align}
 		where the sum is over all data points in the batch and $B$ is the batch size.
+		
+		\subsubsection*{Lower bound in detail}
+		\begin{align}
+			\mathcal{L}(\bm{\lambda}, \bm{\gamma})
+			&= \mathcal{L}(\bm{\lambda}, \bm{\gamma}, \bm{\phi}^*) \\
+			&= \sum_n \sum_k \phi^*_{nk} \left( E_q\left[ \log p(\mathbf{x}_n \mid k, \bm{\beta}) \right]
+			- \log \phi_{nk}^* \right) \\
+			&\quad + \sum_k \left(\alpha_k + \sum_n \phi^*_{nk} - \gamma_k\right) \left( \psi(\gamma_k) - \psi\left(\sum_k \gamma_k\right) \right) + \log \frac{\Gamma\left(\sum_k \alpha_k\right)}{\Gamma\left(\sum_k \gamma_k\right)}
+			+ \sum_k \log \frac{\Gamma(\gamma_k)}{\Gamma(\alpha_k)} \\
+			&\quad + \sum_k E_q\left[ \log\frac{p(\bm{\beta}_k)}{q(\bm{\beta}_k)} \right]
+		\end{align}
+		\begin{align}
+			E_q\left[ \log\frac{q(\bm{\beta}_k)}{p(\bm{\beta}_k)} \right]
+			= D_\text{KL}\left(  \bm{\lambda}_k, \bm{\eta} \right) 
+			= (\bm{\lambda}_k - \bm{\eta})^\top \frac{\partial}{\partial \bm{\lambda}_k} A(\bm{\lambda}_k)
+			+ A(\bm{\eta}) - A(\bm{\lambda}_k).
+		\end{align}
 
 		\subsection*{Mixture of multivariate Bernoullis}
 			\begin{align}
@@ -190,6 +207,8 @@
 			s_k^t\mathbf{m}_k^t{\mathbf{m}_k^t}^\top\right) + \rho_t \left(\bm{\Psi} + s\mathbf{m}\mathbf{m}^\top + \frac{N}{B} \sum_n \phi_{nk}^* \mathbf{x}_n\mathbf{x}_n^\top \right) - s_k\mathbf{m}_k\mathbf{m}_k^\top.
 			\end{align}
 
+			\subsubsection*{Expected log-likelihood}
+
 			To compute he expected log-likelihood (Equation~\ref{eq:expected_loglikelihood}), we need
 			\begin{align}
 				E_q\left[ \bm{\mu}_k^\top \bm{\Sigma}_k^{-1} \bm{\mu}_k \right]
@@ -217,6 +236,52 @@
 				&= - \frac{\nu_k}{2} (\mathbf{x} - \mathbf{m}_k)^\top \bm{\Psi}_k^{-1} (\mathbf{x} - \mathbf{m}_k)
 				- \frac{D}{2} s_k^{-1} + \frac{1}{2} \sum_{i = 1}^D \psi\left( \frac{\nu_k + 1 - i}{2} \right) + \frac{1}{2} \log|\bm{\Psi}_k^{-1}|
 				- \frac{D}{2} \log\pi.
+			\end{align}
+
+			\subsubsection*{Divergence from prior}
+
+			The log-partition function of the normal-inverse-Wishart distribution is given by
+			\begin{align}
+				A(s, \mathbf{m}, \bm{\Psi}, \nu)
+				&= -\frac{\nu}{2} \log|\bm{\Psi}| + \nu \log 2 + \log \Gamma_D\left( \frac{\nu}{2} \right) - \frac{D}{2} \ln s, \\
+				A(s, \mathbf{b}, \mathbf{C}, \nu)
+				&= -\frac{\nu}{2} \log|\mathbf{C} - \frac{1}{4s}\mathbf{b}\mathbf{b}^\top| + \nu \log 2 + \log
+				\Gamma_D\left( \frac{\nu}{2} \right) - \frac{D}{2} \ln s.
+			\end{align}
+			To compute the KL divergence between the prior and posterior beliefs we need to know
+			\begin{align}
+				\frac{\partial}{\partial \mathbf{C}} A(s, \mathbf{b}, \mathbf{C}, \nu)
+				&= -\frac{\nu}{2} (\mathbf{C} - \frac{1}{4s}\mathbf{b}\mathbf{b}^\top)^{-1} \\
+				&= -\frac{\nu}{2} \bm{\Psi}^{-1}, \\
+				\frac{\partial}{\partial b_k} A(s, \mathbf{b}, \mathbf{C}, \nu)
+				&= \sum_{ij} \frac{\partial}{\Psi_{ij}} A(s, \mathbf{b}, \mathbf{C}, \nu) \frac{\partial}{\partial b_k} \Psi_{ij} \\
+				&= \sum_{ij} \frac{\nu}{2} (\bm{\Psi}^{-1})_{ij} \frac{1}{4s} (\delta_{ik} b_j + b_i \delta_{jk})  \\
+				&= \frac{\nu}{4s}\sum_j (\bm{\Psi}^{-1})_{kj} b_j, \\
+				\frac{\partial}{\partial \mathbf{b}} A(s, \mathbf{b}, \mathbf{C}, \nu)
+				&= \frac{\nu}{4s}\bm{\Psi}^{-1} \mathbf{b} \\
+				&= -\frac{\nu}{2}\bm{\Psi}^{-1} \mathbf{m}, \\
+				\frac{\partial}{\partial s} A(s, \mathbf{b}, \mathbf{C}, \nu)
+				&= \sum_{ij} \frac{\partial}{\partial \Psi_{ij}} A(s, \mathbf{b}, \mathbf{C}, \nu) \frac{\partial \Psi_{ij}}{\partial s} \\
+				&= \frac{\nu}{2} \sum_{ij} (\bm{\Psi}^{-1})_{ij} m_i m_j \\
+				&= \frac{\nu}{2} \mathbf{m}^\top \bm{\Psi}^{-1} \mathbf{m} \\
+				\frac{\partial}{\partial \nu} A(s, \mathbf{b}, \mathbf{C}, \nu)
+				&= -\frac{1}{2} \log|\bm{\Psi}| + \log 2 + \frac{1}{2} \psi_D\left( \frac{\nu}{2} \right).
+			\end{align}
+			Hence,
+			\begin{align}
+				E_q\left[ \log\frac{q(\bm{\mu}_k, \bm{\Sigma}_k)}{p(\bm{\mu}_k, \bm{\Sigma}_k)} \right]
+				&= -\frac{\nu_k}{2}\text{tr}\left((\mathbf{C}_k - \mathbf{C})\bm{\Psi}_k^{-1}\right)
+				- \frac{\nu_k}{2}(\mathbf{b}_k - \mathbf{b})^\top \bm{\Psi}_k^{-1}\mathbf{m}_k \\
+				&\quad + (s_k - s) \frac{\nu_k}{2} \mathbf{m}_k^\top \bm{\Psi}_k^{-1} \mathbf{m}_k \\
+				&\quad + (\nu_k - \nu) \left( -\frac{1}{2} \log |\bm{\Psi}_k| + \log 2 + \frac{1}{2} \psi_D\left( \frac{\nu_k}{2} \right) \right) \\
+				&\quad + A(s, \mathbf{m}, \bm{\Psi}, \nu) - A(s_k, \mathbf{m}_k, \bm{\Psi}_k, \nu_k).
+			\end{align}
+			\begin{align}
+				\text{tr}\left((\mathbf{C}_k - \mathbf{C})\bm{\Psi}_k^{-1}\right)
+				&= \text{tr}\left( \mathbf{I} + \mathbf{m}_k\mathbf{m}_k^\top\bm{\Psi}_k^{-1} - \bm{\Psi}\bm{\Psi}_k^{-1} - \mathbf{m}\mathbf{m}^\top\bm{\Psi}_k^{-1} \right) \\
+				&= D + \mathbf{m}_k\bm{\Psi}_k^{-1}\mathbf{m}_k^\top - \text{tr}(\bm{\Psi}\bm{\Psi}_k^{-1}) - \mathbf{m}^\top\bm{\Psi}_k^{-1}\mathbf{m}, \\
+				(\mathbf{b}_k - \mathbf{b})^\top \bm{\Psi}_k^{-1} \mathbf{m}_k
+				&= -2 (s_k\mathbf{m}_k - s\mathbf{m})^\top \bm{\Psi}_k^{-1} \mathbf{m}_k.
 			\end{align}
 
 	\bibliographystyle{abbrvnat}

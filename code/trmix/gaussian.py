@@ -3,6 +3,7 @@ from numpy import sum, ones, zeros, eye, sqrt, arange, pi, log, dot
 from numpy.linalg import cholesky, inv, slogdet
 from numpy.random import randn
 from scipy.special import psi
+from niw import KL_divergence
 
 class Gaussian(object):
 	def __init__(self, dim, m0=None, s0=None, psi0=None, nu0=None):
@@ -69,3 +70,12 @@ class Gaussian(object):
 			+ sum(psi((self.nu + 1. - arange(1, self.dim + 1)) / 2.)) / 2. \
 			+ slogdet(W)[1] / 2. \
 			- self.dim / 2. * log(pi)
+
+
+
+	def prior_divergence(self):
+		C0 = self.psi0 + self.s0 * dot(self.m0, self.m0.T)
+		C  = self.psi  + self.s  * dot(self.m,  self.m.T)
+		return KL_divergence(
+			-2. * self.s  * self.m,  self.s,  C,  self.nu,	
+			-2. * self.s0 * self.m0, self.s0, C0, self.nu0).ravel()[0]
