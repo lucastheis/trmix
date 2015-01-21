@@ -74,8 +74,6 @@ class Gaussian(object):
 
 
 	def prior_divergence(self):
-		C0 = self.psi0 + self.s0 * dot(self.m0, self.m0.T)
-		C  = self.psi  + self.s  * dot(self.m,  self.m.T)
 		return KL_divergence(
-			-2. * self.s  * self.m,  self.s,  C,  self.nu,	
-			-2. * self.s0 * self.m0, self.s0, C0, self.nu0).ravel()[0]
+			self.m,  self.s,  self.psi,  self.nu,	
+			self.m0, self.s0, self.psi0, self.nu0)
