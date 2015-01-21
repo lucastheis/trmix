@@ -1,6 +1,6 @@
 from numpy import ones, dot, sum
 from numpy.random import gamma
-from scipy.special import psi
+from scipy.special import psi, betaln
 
 class Bernoulli(object):
 	def __init__(self, dim=1, a=1., b=1.):
@@ -28,6 +28,15 @@ class Bernoulli(object):
 		return dot(psi(self.alpha).T, data) \
 			+ dot(psi(self.beta).T, 1 - data) \
 			- sum(psi(self.alpha + self.beta))
+
+
+
+	def prior_divergence(self):
+		return sum(\
+			betaln(self.a, self.b) - betaln(self.alpha, self.beta) \
+			+ (self.alpha - self.a) * psi(self.alpha) \
+			+ (self.beta - self.b) * psi(self.beta) \
+			- (self.alpha + self.beta - self.a - self.b) * psi(self.alpha + self.beta))
 
 
 	def p(self):

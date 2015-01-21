@@ -26,8 +26,10 @@ def main(argv):
 	data = asarray(rand(*data.shape) < data, dtype=float, order='F')
 
 	def callback(model):
-		if model.num_updates % 2:
+		if model.num_updates % 5:
 			return
+
+		print model.lower_bound(data)
 
 		p = []
 		for k in range(len(model)):
