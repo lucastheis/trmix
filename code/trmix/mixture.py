@@ -1,4 +1,4 @@
-from numpy import asarray, vstack, sum, mean, empty, exp, log, ones, zeros, dot
+from numpy import asarray, vstack, sum, mean, empty, exp, log, ones, zeros, dot, isnan
 from numpy.random import rand, permutation
 from scipy.special import psi, gammaln
 from utils import logsumexp
@@ -59,7 +59,7 @@ class Mixture(object):
 
 
 	def update_parameters(self, data, kappa=.5, tau=10., max_iter_tr=10, rho=None, N=None,
-			init='none', update_gamma=True):
+			init='uniform', update_gamma=True):
 		"""
 		Perform one trust-region update.
 
@@ -133,7 +133,9 @@ class Mixture(object):
 
 		phi = self.posterior(data)
 
-		L = -sum(phi * log(phi))
+		L = phi * log(phi)
+		L[isnan(L)] = 0. # takes care of zeros in phi
+		L = -sum(L)
 
 		for k in range(len(self)):
 			L += sum(phi[[k]] * self[k].expected_log_likelihood(data))
