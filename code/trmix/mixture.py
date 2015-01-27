@@ -86,7 +86,7 @@ class Mixture(object):
 		for i in range(max_iter_tr):
 			# E-step
 			phi = self.posterior(data)
-			
+
 			# apply heuristic for initialization
 			if max_iter_tr > 1 and i == 0:
 				if init[0].lower() == 'drop':
@@ -150,4 +150,4 @@ class Mixture(object):
 		for k in range(len(self)):
 			L -= self[k].prior_divergence()
 
-		return L
+		return float(L)

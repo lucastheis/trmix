@@ -1,6 +1,6 @@
 from copy import copy
-from numpy import sum, ones, zeros, eye, sqrt, arange, pi, log, dot
-from numpy.linalg import cholesky, inv, slogdet
+from numpy import sum, ones, zeros, eye, sqrt, arange, pi, log, dot, isnan, diag, real
+from numpy.linalg import cholesky, inv, slogdet, eig
 from numpy.random import randn
 from scipy.special import psi
 from niw import KL_divergence
@@ -27,7 +27,7 @@ class Gaussian(object):
 
 
 
-	def update_parameters(self, data, phi=None, base=None, N=None, rho=1.):
+	def update_parameters(self, data, phi=None, base=None, N=None, rho=1., project=True):
 		if N is None:
 			# assume we're given all the data
 			N = data.shape[1]
@@ -44,19 +44,31 @@ class Gaussian(object):
 		self.s = (1. - rho) * base.s + rho * (self.s0 + N_k)
 		self.nu = (1. - rho) * base.nu + rho * (self.nu0 + N_k)
 
-		x_bar = dot(data, phi.T / sum(phi))
+		x_bar = dot(data, phi.T) * N / data.shape[1]
 
-		self.m = (1. - rho) * base.s * base.m + rho * (self.s0 * self.m0 + N_k * x_bar)
+		self.m = (1. - rho) * base.s * base.m + rho * (self.s0 * self.m0 + x_bar)
 		self.m /= self.s
+
+		if isnan(self.m).any():
+			import ipdb
+			ipdb.set_trace()
 
 		smm0 = self.s0 * dot(self.m0, self.m0.T)
 		smmk = self.s * dot(self.m, self.m.T)
 		smmt = base.s * dot(base.m, base.m.T)
-		
+
 		x = sqrt(phi) * data
 		C = dot(x, x.T) * N / data.shape[1]
 
 		self.psi = (1. - rho) * (base.psi + smmt) + rho * (self.psi0 + smm0 + C) - smmk
+
+		# project onto positive-definite cone
+		if project:
+			self.psi = (self.psi + self.psi.T) / 2.
+			D, V = eig(self.psi)
+			D = real(D)
+			D[D < 0.] = 1e-12
+			self.psi = real(dot(dot(V, diag(D)), V.T))
 
 
 
@@ -75,5 +87,5 @@ class Gaussian(object):
 
 	def prior_divergence(self):
 		return KL_divergence(
-			self.m,  self.s,  self.psi,  self.nu,	
+			self.m,  self.s,  self.psi,  self.nu,
 			self.m0, self.s0, self.psi0, self.nu0)
