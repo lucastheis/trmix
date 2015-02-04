@@ -7,12 +7,11 @@ Manage and display experimental results.
 __license__ = 'MIT License <http://www.opensource.org/licenses/mit-license.php>'
 __author__ = 'Lucas Theis <lucas@theis.io>'
 __docformat__ = 'epytext'
-__version__ = '0.4.3'
+__version__ = '0.4.4'
 
 import sys
 import os
 import numpy
-import random
 import scipy
 import socket
 
@@ -24,14 +23,49 @@ from subprocess import Popen, PIPE
 from os import path
 from warnings import warn
 from time import time, strftime, localtime
-from numpy import ceil, argsort
+from numpy import random, ceil, argsort
 from numpy.random import rand, randint
 from distutils.version import StrictVersion
 from BaseHTTPServer import HTTPServer, BaseHTTPRequestHandler
 from httplib import HTTPConnection
 from getopt import getopt
 
-class Experiment:
+class FileCache(type):
+	"""
+	This meta class is used to cache object creation.
+	"""
+
+	def __init__(cls, name, bases, dict):
+		super(FileCache, cls).__init__(name, bases, dict)
+
+		cls._CACHE = {}
+		cls._CACHE_ENABLED = True
+
+
+
+	def __call__(cls, filename='', *args, **kwargs):
+		if not cls._CACHE_ENABLED:
+			return super(FileCache, cls).__call__(filename, *args, **kwargs)
+
+		if filename in cls._CACHE:
+			# make sure file has not been modified
+			mtime = os.path.getmtime(filename)
+			if mtime == cls._CACHE[filename][0]:
+				# return from cache
+				return cls._CACHE[filename][1]
+
+		instance = super(FileCache, cls).__call__(filename, *args, **kwargs)
+
+		if os.path.exists(filename):
+			# cache instance
+			mtime = os.path.getmtime(filename)
+			cls._CACHE[filename] = (mtime, instance)
+
+		return instance
+
+
+
+class Experiment(object):
 	"""
 	@type time: float
 	@ivar time: time at initialization of experiment
@@ -79,43 +113,7 @@ class Experiment:
 	@ivar versions: versions of Python, numpy and scipy
 	"""
 
-	def __str__(self):
-		"""
-		Summarize information about the experiment.
-
-		@rtype: string
-		@return: summary of the experiment
-		"""
-
-		strl = []
-
-		# date and duration of experiment
-		strl.append(strftime('date \t\t %a, %d %b %Y %H:%M:%S', localtime(self.time)))
-		strl.append('duration \t ' + str(int(self.duration)) + 's')
-		strl.append('hostname \t ' + self.hostname)
-
-		# commit hash
-		if self.commit:
-			if self.modified:
-				strl.append('commit \t\t ' + self.commit + ' (modified)')
-			else:
-				strl.append('commit \t\t ' + self.commit)
-
-		# results
-		strl.append('results \t {' + ', '.join(map(str, self.results.keys())) + '}')
-
-		# comment
-		if self.comment:
-			strl.append('\n' + self.comment)
-
-		return '\n'.join(strl)
-
-
-
-	def __del__(self):
-		self.status(None)
-
-
+	__metaclass__ = FileCache
 
 	def __init__(self, filename='', comment='', seed=None, server=None, port=8000):
 		"""
@@ -233,6 +231,64 @@ class Experiment:
 			self.server = server
 			self.port = port
 			self.status('running')
+
+
+
+	def __del__(self):
+		self.status(None)
+
+
+
+	def __str__(self):
+		"""
+		Summarize information about the experiment.
+
+		@rtype: string
+		@return: summary of the experiment
+		"""
+
+		strl = []
+
+		# date and duration of experiment
+		strl.append(strftime('date \t\t %a, %d %b %Y %H:%M:%S', localtime(self.time)))
+		strl.append('duration \t ' + str(int(self.duration)) + 's')
+		strl.append('hostname \t ' + self.hostname)
+
+		# commit hash
+		if self.commit:
+			if self.modified:
+				strl.append('commit \t\t ' + self.commit + ' (modified)')
+			else:
+				strl.append('commit \t\t ' + self.commit)
+
+		# results
+		strl.append('results \t {' + ', '.join(map(str, self.results.keys())) + '}')
+
+		# comment
+		if self.comment:
+			strl.append('\n' + self.comment)
+
+		return '\n'.join(strl)
+
+
+
+	def __getitem__(self, key):
+		return self.results[key]
+
+
+
+	def __setitem__(self, key, value):
+		self.results[key] = value
+
+
+
+	def __delitem__(self, key):
+		del self.results[key]
+
+
+
+	def keys(self):
+		return self.results.keys()
 
 
 
@@ -371,21 +427,6 @@ class Experiment:
 				if StrictVersion(res['version']) >= '0.4.0' else None
 			self.id = res['id'] \
 				if StrictVersion(res['version']) >= '0.4.0' else None
-
-
-
-	def __getitem__(self, key):
-		return self.results[key]
-
-
-
-	def __setitem__(self, key, value):
-		self.results[key] = value
-
-
-
-	def __delitem__(self, key):
-		del self.results[key]
 
 
 
