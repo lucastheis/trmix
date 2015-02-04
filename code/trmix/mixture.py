@@ -1,4 +1,4 @@
-from numpy import asarray, vstack, sum, mean, empty, exp, log, ones, zeros, dot, isnan
+from numpy import asarray, vstack, sum, mean, empty, exp, log, ones, zeros, dot, isinf
 from numpy.random import rand, permutation
 from scipy.special import psi, gammaln
 from utils import logsumexp
@@ -126,16 +126,20 @@ class Mixture(object):
 
 
 
-	def lower_bound(self, data):
+	def lower_bound(self, data, N=None):
 		"""
 		Compute lower bound with respect to the given data points.
 		"""
 
 		phi = self.posterior(data)
+		logPhi = log(phi)
+		logPhi[isinf(logPhi)] = -1e32 # takes care of zeros in phi
 
-		L = phi * log(phi)
-		L[isnan(L)] = 0. # takes care of zeros in phi
-		L = -sum(L)
+		if N is not None:
+			# this scales the lower bound to N data points
+			phi *= N / float(data.shape[1])
+
+		L = -sum(phi * logPhi)
 
 		for k in range(len(self)):
 			L += sum(phi[[k]] * self[k].expected_log_likelihood(data))
